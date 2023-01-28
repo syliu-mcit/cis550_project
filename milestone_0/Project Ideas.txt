@@ -1,0 +1,15 @@
+CIS 550
+Project Ideas
+https://projects.fivethirtyeight.com/
+https://wpdatatables.com/interactive-data-visualization/
+https://ourworldindata.org/plastic-pollution
+
+Open Source Data
+https://datasetsearch.research.google.com/
+https://www.kaggle.com/datasets?topic=trendingDataset
+https://www.pewresearch.org/internet/datasets/
+https://www.yelp.com/dataset/
+https://www.kaggle.com/datasets/giovamata/airlinedelaycauses
+https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand
+
+
