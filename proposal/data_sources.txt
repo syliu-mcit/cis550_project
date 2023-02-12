@@ -1,0 +1,7 @@
+Yelp Data (Filter only NY Metro area)
+https://docs.developer.yelp.com/docs/fusion-authentication
+
+Business + Reviews
+
+NYC Open Data (All Health Rating and Violations)
+https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/43nn-pn8j
