@@ -13,11 +13,15 @@ app.use(cors({
 // TODO: Add routes that are completed in routes.js
 // ZW
 app.get('/airline_review/:airline_name', routes.airline_reviews);
+
 // BL
 
 // ZB
 
 // MF
+app.get('/best_route_cities_overall/', routes.best_route_cities_overall);
+app.get('/best_route_cities_dining/', routes.best_route_cities_dining);
+app.get('/routes_one_layover/', routes.routes_one_layover);
 
 
 app.listen(config.server_port, () => {
