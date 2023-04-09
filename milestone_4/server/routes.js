@@ -34,8 +34,131 @@ const airline_reviews = async function(req, res) {
 
 
 // BL: 
+const get_city_or_country = async function(req, res) {
+  // a route that given an airline_name, returns all records of reviews for the airline
+  connection.query(`
+    SELECT DISTINCT City
+    FROM Airports
+    WHERE city like '${req.params.name}%' OR country like '${req.params.name}%'
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+const nonstop_international_dest = async function(req, res) {
+  // a route that given an airline_name, returns all records of reviews for the airline
+  connection.query(`
+  SELECT distinct country
+  FROM Airports
+  WHERE iata in
+  (SELECT destinationAirport
+  FROM Routes
+  WHERE sourceAirport in (SELECT iata from Airports WHERE country =
+    '${req.params.country}'))
+  AND NOT country = '${req.params.country}%';
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+const get_route_map = async function(req, res) {
+  // a route that given an airline_name, returns all records of reviews for the airline
+  connection.query(`
+  SELECT DISTINCT sourceAirport, destinationAirport FROM Routes WHERE airlineID in 
+  (SELECT id FROM Airlines WHERE name = '${req.params.airline_name}')
+  ORDER BY sourceAirport, destinationAirport
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+const get_popular_routes_cities = async function(req, res) {
+  // a route that given an airline_name, returns all records of reviews for the airline
+  connection.query(`
+  WITH routes_new AS (
+    SELECT * FROM Routes r
+    LEFT JOIN (SELECT id as sourceID, city AS sourceCity, country as
+    sourceCountry FROM Airports) a ON r.sourceAirportID = a.sourceID
+    LEFT JOIN (SELECT id as destID, city AS destCity, country as destCountry
+    FROM Airports) b ON r.destinationAirportID = b.destID
+    )
+    SELECT sourceCity, destCity, COUNT(DISTINCT airlineID) AS NumAirlines, COUNT(*)
+    AS NumRoutes
+    FROM routes_new
+    GROUP BY sourceCity, destCity
+    ORDER BY NumRoutes desc
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+const get_popular_routes_countries = async function(req, res) {
+  // a route that given an airline_name, returns all records of reviews for the airline
+  connection.query(`
+  WITH routes_new AS (
+    SELECT * FROM Routes r
+    LEFT JOIN (SELECT id as sourceID, city AS sourceCity, country as
+    sourceCountry FROM Airports) a ON r.sourceAirportID = a.sourceID
+    LEFT JOIN (SELECT id as destID, city AS destCity, country as destCountry
+    FROM Airports) b ON r.destinationAirportID = b.destID
+    )
+    SELECT sourceCountry, destCountry, COUNT(DISTINCT airlineID) AS NumAirlines,
+    COUNT(*) AS NumRoutes
+    FROM routes_new
+    WHERE sourceCountry != destCountry
+    GROUP BY sourceCountry, destCountry
+    ORDER BY NumRoutes desc;
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+const most_delayed_route = async function(req, res) {
+  // a route that given an airline_name, returns all records of reviews for the airline
+  connection.query(`
+  SELECT opCarrier, origin, dest, AVG(totalDelay) AS averageDelay,
+  COUNT(CASE WHEN totalDelay > 0 THEN 1 END)/COUNT(*) AS delayRate
+  FROM FlightDelay
+  WHERE opCarrier = '${req.params.opCarrier}'
+  GROUP BY opCarrier, origin, dest
+  ORDER BY averageDelay DESC;  
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
 
 // ZB:
+
 
 // MF:
 
@@ -139,6 +262,12 @@ module.exports = {
   airline_reviews,
 
   // BL
+  get_city_or_country,
+  nonstop_international_dest,
+  get_route_map,
+  get_popular_routes_cities,
+  get_popular_routes_countries,
+  most_delayed_route,
 
   // ZB
 
