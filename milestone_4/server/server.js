@@ -13,8 +13,13 @@ app.use(cors({
 // TODO: Add routes that are completed in routes.js
 // ZW
 app.get('/airline_review/:airline_name', routes.airline_reviews);
-
 // BL
+app.get('/get_city_or_country/:name', routes.get_city_or_country);
+app.get('/nonstop_international_dest/:country', routes.nonstop_international_dest);
+app.get('/get_route_map/:airline_name', routes.get_route_map);
+app.get('/get_popular_routes_cities/', routes.get_popular_routes_cities);
+app.get('/get_popular_routes_countries/', routes.get_popular_routes_countries);
+app.get('/most_delayed_route/:opCarrier', routes.most_delayed_route);
 
 // ZB
 
