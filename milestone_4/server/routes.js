@@ -15,7 +15,7 @@ connection.connect((err) => err && console.log(err));
 // TODO: Add routes for the different web pages
 
 // ZW:
-// Route 1: GET all the reviews for a particular airline ./airline_review/:airline_name
+// Route 1: GET all the reviews for a particular airline /airline_review/:airline_name
 const airline_reviews = async function(req, res) {
   // a route that given an airline_name, returns all records of reviews for the airline
   connection.query(`
@@ -27,15 +27,234 @@ const airline_reviews = async function(req, res) {
       console.log(err);
       res.json({});
     } else {
-      res.json(data[0]);
+      res.json(data);
     }
   });
 }
 
+// Route 2: GET the top airlines for each category (default 20 per page) /top_airline/:category?page=1&page_size=10
+// :category can be one of the 5 followings: overall_rating, seat_rating, staff_rating, food_rating, entertain_rating
+const top_airline = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+      SELECT name, AVG(${req.params.category}) FROM Review_Airline
+      GROUP BY name
+      ORDER BY AVG(${req.params.category}) DESC, name
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  
+  } else {
+    // Pagination
+    connection.query(`
+      SELECT name, AVG(${req.params.category}) FROM Review_Airline
+      GROUP BY name
+      ORDER BY AVG(${req.params.category}) DESC, name
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+
+}
+
+// Route 3: GET the ratings for economy class vs. business class for all airlines /class_ratings
+const class_ratings = async function(req, res) {
+  connection.query(`
+    SELECT name, cabin_flown, AVG(overall_rating) as rating FROM Review_Airline
+    GROUP BY name, cabin_flown
+    ORDER BY name
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  }); 
+}
+
+// Route 4: GET the airlines with the broadest coverage (number of distinct routes) along with their overall ratings /broadest_coverage_ratings
+const broadest_coverage_ratings = async function(req, res) {
+  connection.query(`
+    SELECT DISTINCT ra.name, COUNT(r.airlineID) AS number_of_routes, AVG(ra.overall_rating) AS overall_rating
+    FROM Review_Airline ra
+    JOIN AirlineMap m
+    ON ra.name = m.skytrax_airlineName
+    JOIN Routes r
+    ON r.airlineID = m.openflight_airlineID
+    GROUP BY r.airlineID
+    ORDER BY COUNT(r.airlineID) DESC
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  }); 
+}
+
+// Route 5: GET all the reviews for a particular airport /airport_review/:airport_name
+const airport_reviews = async function(req, res) {
+  // a route that given an airport_name, returns all records of reviews for the airport
+  connection.query(`
+    SELECT *
+    FROM Review_Airport
+    WHERE name = '${req.params.airport_name}'
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+// Route 6: GET the top airports for each category (default 20 per page) /top_airport/:category?page=1&page_size=10
+// :category can be one of the 4 followings: overall_rating, queue_rating, clean_rating, shop_rating
+const top_airport = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+      SELECT name, AVG(${req.params.category}) FROM Review_Airport
+      GROUP BY name
+      ORDER BY AVG(${req.params.category}) DESC, name
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  
+  } else {
+    // Pagination
+    connection.query(`
+      SELECT name, AVG(${req.params.category}) FROM Review_Airport
+      GROUP BY name
+      ORDER BY AVG(${req.params.category}) DESC, name
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+
+}
+
+// Route 7: GET the countries ranked by the average ratings of all airports in each country /top_countries
+const top_countries = async function(req, res) {
+  connection.query(`
+    WITH avg_rating AS (
+      SELECT name, AVG(overall_rating) as rating FROM Review_Airport
+      GROUP BY name
+    )
+    
+    SELECT a.country, AVG(r.rating) as Avg_rating
+    FROM avg_rating r
+    JOIN AirportMap m
+    ON r.name = m.skytrax_airportName
+    JOIN Airports a
+    ON a.id = m.openflight_airportID
+    GROUP BY a.country
+    ORDER BY AVG(r.rating) DESC;
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  }); 
+}
+
+// Route 8: GET the top airports (default 20 per page) in a specific country along with their city and rating /top_airports_by_country/:country_name?page=1&page_size=10
+
+const top_airports_by_country = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+      WITH avg_rating AS (
+        SELECT name, AVG(overall_rating) as rating FROM Review_Airport
+        GROUP BY name
+      )
+      
+      SELECT r.name, a.city, r.rating
+      FROM avg_rating r
+      JOIN AirportMap m
+      ON r.name = m.skytrax_airportName
+      JOIN Airports a
+      ON a.id = m.openflight_airportID
+      WHERE country = '${req.params.country_name}'
+      ORDER BY rating DESC, r.name
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  
+  } else {
+    // Pagination
+    connection.query(`
+      WITH avg_rating AS (
+        SELECT name, AVG(overall_rating) as rating FROM Review_Airport
+        GROUP BY name
+      )
+      
+      SELECT r.name, a.city, r.rating
+      FROM avg_rating r
+      JOIN AirportMap m
+      ON r.name = m.skytrax_airportName
+      JOIN Airports a
+      ON a.id = m.openflight_airportID
+      WHERE country = '${req.params.country_name}'
+      ORDER BY rating DESC, r.name
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+
+}
+
+
+
 
 // BL: 
 const get_city_or_country = async function(req, res) {
-  // a route that given an airline_name, returns all records of reviews for the airline
+  // 
   connection.query(`
     SELECT DISTINCT City
     FROM Airports
@@ -51,7 +270,7 @@ const get_city_or_country = async function(req, res) {
 }
 
 const nonstop_international_dest = async function(req, res) {
-  // a route that given an airline_name, returns all records of reviews for the airline
+  // 
   connection.query(`
   SELECT distinct country
   FROM Airports
@@ -72,7 +291,7 @@ const nonstop_international_dest = async function(req, res) {
 }
 
 const get_route_map = async function(req, res) {
-  // a route that given an airline_name, returns all records of reviews for the airline
+  // 
   connection.query(`
   SELECT DISTINCT sourceAirport, destinationAirport FROM Routes WHERE airlineID in 
   (SELECT id FROM Airlines WHERE name = '${req.params.airline_name}')
@@ -88,7 +307,7 @@ const get_route_map = async function(req, res) {
 }
 
 const get_popular_routes_cities = async function(req, res) {
-  // a route that given an airline_name, returns all records of reviews for the airline
+  // 
   connection.query(`
   WITH routes_new AS (
     SELECT * FROM Routes r
@@ -113,7 +332,7 @@ const get_popular_routes_cities = async function(req, res) {
 }
 
 const get_popular_routes_countries = async function(req, res) {
-  // a route that given an airline_name, returns all records of reviews for the airline
+  //
   connection.query(`
   WITH routes_new AS (
     SELECT * FROM Routes r
@@ -139,7 +358,7 @@ const get_popular_routes_countries = async function(req, res) {
 }
 
 const most_delayed_route = async function(req, res) {
-  // a route that given an airline_name, returns all records of reviews for the airline
+  // 
   connection.query(`
   SELECT opCarrier, origin, dest, AVG(totalDelay) AS averageDelay,
   COUNT(CASE WHEN totalDelay > 0 THEN 1 END)/COUNT(*) AS delayRate
@@ -260,7 +479,13 @@ Airports) d ON r1.sourceAirport = d.iata
 module.exports = {
   // ZW
   airline_reviews,
-
+  top_airline,
+  class_ratings,
+  broadest_coverage_ratings,
+  airport_reviews,
+  top_airport,
+  top_countries,
+  top_airports_by_country,
   // BL
   get_city_or_country,
   nonstop_international_dest,
