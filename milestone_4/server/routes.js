@@ -290,12 +290,183 @@ const nonstop_international_dest = async function(req, res) {
   });
 }
 
+// http://localhost:8080/find_destinations?start_city=New%20York&dest_country=Germany
+
+// http://localhost:8080/find_destinations?start_city=New%20York&dest_country=Germany&unique_countries=true
+
+const find_destinations = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+      select TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceCity, sourceCountry, sourceIata, destCity, destCountry, destIata, group_concat(distinct airlineName separator ', ') AS airlines
+      FROM Routes r JOIN
+          (SELECT id AS airlineID, name AS airlineName FROM Airlines) a
+      ON r.airlineID = a.airlineID
+      JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+      ON r.sourceAirport = a1.sourceIata
+      JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+      ON r.destinationAirport = a2.destIata
+      where sourceAirport in (select iata from Airports where city like '${req.query.start_city}%') AND
+            destinationAirport in (select iata from Airports where country like '${req.query.dest_country}%')
+      group by sourceIata, sourceCity, sourceCountry, destIata, destCity, destCountry
+      order by sourceCity, sourceCountry, destCity, destCountry
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  } 
+
+  else {
+    // Pagination
+    connection.query(`
+    select TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceCity, sourceCountry, sourceIata, destCity, destCountry, destIata, group_concat(distinct airlineName separator ', ') AS airlines
+    FROM Routes r JOIN
+        (SELECT id AS airlineID, name AS airlineName FROM Airlines) a
+    ON r.airlineID = a.airlineID
+    JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON r.sourceAirport = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON r.destinationAirport = a2.destIata
+    where sourceAirport in (select iata from Airports where city like '${req.query.start_city}%') AND
+          destinationAirport in (select iata from Airports where country like '${req.query.dest_country}%')
+    group by sourceIata, sourceCity, sourceCountry, destIata, destCity, destCountry
+    order by sourceCity, sourceCountry, destCity, destCountry
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+
+}
+
+const find_destinations_country = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+      select TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceCity, sourceCountry, destCountry, group_concat(distinct airlineName separator ', ') AS airlines
+      FROM Routes r JOIN
+          (SELECT id AS airlineID, name AS airlineName FROM Airlines) a
+      ON r.airlineID = a.airlineID
+      JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+      ON r.sourceAirport = a1.sourceIata
+      JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+      ON r.destinationAirport = a2.destIata
+      where sourceAirport in (select iata from Airports where city like '${req.query.start_city}%') AND
+            destinationAirport in (select iata from Airports where country like '${req.query.dest_country}%')
+      group by sourceCity, sourceCountry, destCountry
+      order by sourceCity, sourceCountry, destCountry
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  } 
+
+  else {
+    // Pagination
+    connection.query(`
+    select TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceCity, sourceCountry, destCountry, group_concat(distinct airlineName separator ', ') AS airlines
+    FROM Routes r JOIN
+        (SELECT id AS airlineID, name AS airlineName FROM Airlines) a
+    ON r.airlineID = a.airlineID
+    JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON r.sourceAirport = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON r.destinationAirport = a2.destIata
+    where sourceAirport in (select iata from Airports where city like '${req.query.start_city}%') AND
+          destinationAirport in (select iata from Airports where country like '${req.query.dest_country}%')
+    group by sourceCity, sourceCountry, destCountry
+    order by sourceCity, sourceCountry, destCountry
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+}
+
+// http://localhost:8080/get_route_map/United%20Airlines
+
 const get_route_map = async function(req, res) {
+  
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceIata, sourceCity, sourceCountry, destIata, destCity, destCountry
+    FROM Routes r JOIN
+    (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON r.sourceAirport = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON r.destinationAirport = a2.destIata
+    WHERE airlineID in (SELECT id FROM Airlines WHERE name like '${req.params.airline_name}%')
+    ORDER BY sourceIata, sourceCity, sourceCountry, destIata, destCity, destCountry
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  } 
+
+  else {
+    // Pagination
+    connection.query(`
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceIata, sourceCity, sourceCountry, destIata, destCity, destCountry
+    FROM Routes r JOIN
+    (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON r.sourceAirport = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON r.destinationAirport = a2.destIata
+    WHERE airlineID in (SELECT id FROM Airlines WHERE name like '${req.params.airline_name}%')
+    ORDER BY sourceIata, sourceCity, sourceCountry, destIata, destCity, destCountry
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+}
+
+// http://localhost:8080/get_route_map_count/United%20Airlines
+const get_route_map_count = async function(req, res) {
   // 
   connection.query(`
-  SELECT DISTINCT sourceAirport, destinationAirport FROM Routes WHERE airlineID in 
-  (SELECT id FROM Airlines WHERE name = '${req.params.airline_name}')
-  ORDER BY sourceAirport, destinationAirport
+  SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, count(distinct(sourceCity)) as cities, count(distinct(sourceCountry)) as countries
+  FROM Routes r JOIN
+  (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+  ON r.sourceAirport = a1.sourceIata
+  JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+  ON r.destinationAirport = a2.destIata
+  WHERE airlineID in (SELECT id FROM Airlines WHERE name like '${req.params.airline_name}%')
+  ORDER BY cities DESC;
   `, (err, data) => {
     if (err || data.length === 0) {
       console.log(err);
@@ -306,6 +477,50 @@ const get_route_map = async function(req, res) {
   });
 }
 
+// http://localhost:8080/get_route_map_countries/United%20Airlines
+const get_route_map_countries = async function(req, res) {
+  // 
+  connection.query(`
+  SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, destCountry, count(*) AS routes
+  FROM Routes r JOIN
+  (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+  ON r.sourceAirport = a1.sourceIata
+  JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+  ON r.destinationAirport = a2.destIata
+  WHERE airlineID in (SELECT id FROM Airlines  WHERE name like '${req.params.airline_name}%')
+  GROUP BY destCountry
+  ORDER BY routes DESC LIMIT 10
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+
+// http://localhost:8080/get_airlines
+const get_airlines = async function(req, res) {
+  // 
+  connection.query(`
+  select DISTINCT airlineName
+  FROM Routes r JOIN
+       (SELECT id AS airlineID, name AS airlineName FROM Airlines) a
+  ON r.airlineID = a.airlineID
+  ORDER By airlineName;
+  `, (err, data) => {
+    if (err || data.length === 0) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data);
+    }
+  });
+}
+
+// http://localhost:8080/get_popular_routes_cities
 const get_popular_routes_cities = async function(req, res) {
   // 
   connection.query(`
@@ -316,7 +531,7 @@ const get_popular_routes_cities = async function(req, res) {
     LEFT JOIN (SELECT id as destID, city AS destCity, country as destCountry
     FROM Airports) b ON r.destinationAirportID = b.destID
     )
-    SELECT sourceCity, destCity, COUNT(DISTINCT airlineID) AS NumAirlines, COUNT(*)
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceCity, destCity, COUNT(DISTINCT airlineID) AS NumAirlines, COUNT(*)
     AS NumRoutes
     FROM routes_new
     GROUP BY sourceCity, destCity
@@ -331,6 +546,7 @@ const get_popular_routes_cities = async function(req, res) {
   });
 }
 
+// http://localhost:8080/get_popular_routes_countries
 const get_popular_routes_countries = async function(req, res) {
   //
   connection.query(`
@@ -341,10 +557,9 @@ const get_popular_routes_countries = async function(req, res) {
     LEFT JOIN (SELECT id as destID, city AS destCity, country as destCountry
     FROM Airports) b ON r.destinationAirportID = b.destID
     )
-    SELECT sourceCountry, destCountry, COUNT(DISTINCT airlineID) AS NumAirlines,
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, sourceCountry, destCountry, COUNT(DISTINCT airlineID) AS NumAirlines,
     COUNT(*) AS NumRoutes
     FROM routes_new
-    WHERE sourceCountry != destCountry
     GROUP BY sourceCountry, destCountry
     ORDER BY NumRoutes desc;
   `, (err, data) => {
@@ -357,23 +572,71 @@ const get_popular_routes_countries = async function(req, res) {
   });
 }
 
+// http://localhost:8080/most_delayed_route?airline=United%20Airlines&minFlights=25
 const most_delayed_route = async function(req, res) {
-  // 
-  connection.query(`
-  SELECT opCarrier, origin, dest, AVG(totalDelay) AS averageDelay,
-  COUNT(CASE WHEN totalDelay > 0 THEN 1 END)/COUNT(*) AS delayRate
-  FROM FlightDelay
-  WHERE opCarrier = '${req.params.opCarrier}'
-  GROUP BY opCarrier, origin, dest
-  ORDER BY averageDelay DESC;  
-  `, (err, data) => {
-    if (err || data.length === 0) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data);
-    }
-  });
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, airlineName, sourceCity, sourceIata, destCity, destIata, averageDelay, delayRate, NumFlights
+    FROM
+    (SELECT opCarrier, origin, dest, AVG(totalDelay) AS averageDelay,
+    COUNT(CASE WHEN totalDelay > 0 THEN 1 END)/COUNT(*) AS delayRate, COUNT(*) as NumFlights
+    FROM FlightDelay
+    WHERE opCarrier IN (select iata FROM Airlines WHERE name like '${req.query.airline}%')
+    GROUP BY opCarrier, origin, dest
+    HAVING NumFlights >= ${req.query.minFlights}) f
+    JOIN
+    (SELECT name as airlineName, iata as airlineIata FROM Airlines) a ON f.opCarrier = a.airlineIata
+    JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON f.origin = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON f.dest = a2.destIata
+    GROUP BY opCarrier, origin, dest
+    ORDER BY averageDelay DESC
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  } 
+
+  else {
+    // Pagination
+    connection.query(`
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, airlineName, sourceCity, sourceIata, destCity, destIata, averageDelay, delayRate, NumFlights
+    FROM
+    (SELECT opCarrier, origin, dest, AVG(totalDelay) AS averageDelay,
+    COUNT(CASE WHEN totalDelay > 0 THEN 1 END)/COUNT(*) AS delayRate, COUNT(*) as NumFlights
+    FROM FlightDelay
+    WHERE opCarrier IN (select iata FROM Airlines WHERE name like '${req.query.airline}%')
+    GROUP BY opCarrier, origin, dest
+    HAVING NumFlights >= ${req.query.minFlights}) f
+    JOIN
+    (SELECT name as airlineName, iata as airlineIata FROM Airlines) a ON f.opCarrier = a.airlineIata
+    JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON f.origin = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON f.dest = a2.destIata
+    GROUP BY opCarrier, origin, dest
+    ORDER BY averageDelay DESC
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+
+
+
 }
 
 // ZB:
@@ -488,8 +751,15 @@ module.exports = {
   top_airports_by_country,
   // BL
   get_city_or_country,
+  find_destinations, 
+  find_destinations_country, 
+
   nonstop_international_dest,
   get_route_map,
+  get_route_map_count,
+  get_route_map_countries,
+  get_airlines,
+
   get_popular_routes_cities,
   get_popular_routes_countries,
   most_delayed_route,

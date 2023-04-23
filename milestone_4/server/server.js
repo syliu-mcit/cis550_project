@@ -23,11 +23,20 @@ app.get('/top_airports_by_country/:country_name', routes.top_airports_by_country
 
 // BL
 app.get('/get_city_or_country/:name', routes.get_city_or_country);
+app.get('/find_destinations/', routes.find_destinations);
+app.get('/find_destinations_country/', routes.find_destinations_country);
+
 app.get('/nonstop_international_dest/:country', routes.nonstop_international_dest);
 app.get('/get_route_map/:airline_name', routes.get_route_map);
+app.get('/get_route_map_count/:airline_name', routes.get_route_map_count);
+app.get('/get_route_map_countries/:airline_name', routes.get_route_map_countries);
+app.get('/get_airlines/', routes.get_airlines);
+
+
 app.get('/get_popular_routes_cities/', routes.get_popular_routes_cities);
 app.get('/get_popular_routes_countries/', routes.get_popular_routes_countries);
-app.get('/most_delayed_route/:opCarrier', routes.most_delayed_route);
+
+app.get('/most_delayed_route/', routes.most_delayed_route);
 
 // ZB
 
