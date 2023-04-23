@@ -5,9 +5,12 @@ import { createTheme } from "@mui/material/styles";
 
 import NavBar from './components/NavBar';
 import HomePage from './pages/HomePage';
-// import AlbumsPage from './pages/AlbumsPage';
-// import SongsPage from './pages/SongsPage';
-// import AlbumInfoPage from './pages/AlbumInfoPage'
+
+// for Routes header
+import FindDestinations from "./pages/FindDestinations";
+import RouteMap from "./pages/RouteMap";
+import PopularRoute from "./pages/PopularRoute";
+import DelayStats from "./pages/DelayStats";
 
 // createTheme enables you to customize the look and feel of your app past the default
 // in this case, we only change the color scheme
@@ -34,6 +37,11 @@ export default function App() {
         <NavBar />
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/routes/find_destinations" element={<FindDestinations />} /> 
+          <Route path="/routes/route_map" element={<RouteMap />} />
+          <Route path="/routes/popular_routes" element={<PopularRoute />} />
+          <Route path="/routes/delay_stats" element={<DelayStats />} />
+
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
