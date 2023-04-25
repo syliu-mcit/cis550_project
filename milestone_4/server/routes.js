@@ -737,6 +737,251 @@ Airports) d ON r1.sourceAirport = d.iata
 }
 
 
+// http://localhost:8080/trip_direct?start_city=New%20York&dest_city=Toronto
+const trip_direct = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+    WITH tmp_route AS
+    (SELECT airlineID, sourceCity, sourceCountry, sourceIata, destCity, destCountry, destIata
+    FROM Routes r
+    JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON r.sourceAirport = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON r.destinationAirport = a2.destIata
+    where sourceAirport in (select iata from Airports where city like '${req.query.start_city}%') AND
+          destinationAirport in (select iata from Airports where city like '${req.query.dest_city}%')
+    group by airlineID, sourceIata, sourceCity, destIata, destCity
+    order by airlineID, sourceIata, sourceCity, destIata, destCity
+    ),
+    tmp_airline AS (SELECT id, Airlines.name AS name, iata, overall_rating, seat_rating, staff_rating, food_rating, entertain_rating
+    FROM Airlines JOIN AirlineMap ON Airlines.id = AirlineMap.openflight_airlineID
+     JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(seat_rating) AS seat_rating, AVG(staff_rating) AS staff_rating,
+            AVG(food_rating) AS food_rating, AVG(entertain_rating) AS entertain_rating
+      FROM Review_Airline
+      GROUP BY name ) r
+     ON AirlineMap.skytrax_airlineName = r.name),
+    tmp_airport AS (SELECT id, Airports.name AS name, city, country, iata, latitude, longitude, overall_rating, queue_rating, clean_rating
+    FROM Airports JOIN AirportMap ON Airports.id = AirportMap.openflight_airportID
+        JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(queue_rating) AS queue_rating, AVG(clean_rating) AS clean_rating
+      FROM Review_Airport
+      GROUP BY name ) r
+     ON AirportMap.skytrax_airportName = r.name)
+  SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, al.name AS airlineName, sourceCity, sourceIata, destCity, destIata,
+        ROUND((al.overall_rating + ap.overall_rating + ap2.overall_rating)/3, 1) AS tripRating,
+        ROUND(111.111 * (1/1.6) * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(ap.Latitude)) * COS(RADIANS(ap2.Latitude))
+          * COS(RADIANS(ap.Longitude - ap2.Longitude)) + SIN(RADIANS(ap.Latitude)) * SIN(RADIANS(ap2.Latitude))))), 0) AS tripDistance,
+        al.overall_rating AS airlineRating, seat_rating AS seatRating, staff_rating AS staffRating, food_rating AS foodRating,
+        entertain_rating AS entertain_rating, ap.overall_rating AS sourceAirportRating, ap.queue_rating AS sourceQueueRating,
+        ap.clean_rating AS sourceCleanRating, ap2.overall_rating AS destAirportRating, ap2.queue_rating AS destQueueRating,
+        ap2.clean_rating AS destCleanRating, averageDelay, delayRate
+  FROM tmp_route r JOIN tmp_airline al ON r.airlineID = al.id
+  JOIN tmp_airport ap ON r.sourceIata = ap.iata
+  JOIN tmp_airport ap2 ON r.destIata = ap2.iata
+  LEFT JOIN FlightDelay_Route d ON al.iata = d.OpCarrier AND r.sourceIata = origin AND r.destIata = dest
+  ORDER BY tripRating DESC
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  } 
+
+  else {
+    // Pagination
+    connection.query(`
+    WITH tmp_route AS
+    (SELECT airlineID, sourceCity, sourceCountry, sourceIata, destCity, destCountry, destIata
+    FROM Routes r
+    JOIN (SELECT iata as sourceIata, city as sourceCity, country as sourceCountry FROM Airports) a1
+    ON r.sourceAirport = a1.sourceIata
+    JOIN (SELECT iata as destIata, city as destCity, country as destCountry FROM Airports) a2
+    ON r.destinationAirport = a2.destIata
+    where sourceAirport in (select iata from Airports where city like '${req.query.start_city}%') AND
+          destinationAirport in (select iata from Airports where city like '${req.query.dest_city}%')
+    group by airlineID, sourceIata, sourceCity, destIata, destCity
+    order by airlineID, sourceIata, sourceCity, destIata, destCity
+    ),
+    tmp_airline AS (SELECT id, Airlines.name AS name, iata, overall_rating, seat_rating, staff_rating, food_rating, entertain_rating
+    FROM Airlines JOIN AirlineMap ON Airlines.id = AirlineMap.openflight_airlineID
+     JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(seat_rating) AS seat_rating, AVG(staff_rating) AS staff_rating,
+            AVG(food_rating) AS food_rating, AVG(entertain_rating) AS entertain_rating
+      FROM Review_Airline
+      GROUP BY name ) r
+     ON AirlineMap.skytrax_airlineName = r.name),
+    tmp_airport AS (SELECT id, Airports.name AS name, city, country, iata, latitude, longitude, overall_rating, queue_rating, clean_rating
+    FROM Airports JOIN AirportMap ON Airports.id = AirportMap.openflight_airportID
+        JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(queue_rating) AS queue_rating, AVG(clean_rating) AS clean_rating
+      FROM Review_Airport
+      GROUP BY name ) r
+     ON AirportMap.skytrax_airportName = r.name)
+  SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, al.name AS airlineName, sourceCity, sourceIata, destCity, destIata,
+        ROUND((al.overall_rating + ap.overall_rating + ap2.overall_rating)/3, 1) AS tripRating,
+        ROUND(111.111 * (1/1.6) * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(ap.Latitude)) * COS(RADIANS(ap2.Latitude))
+          * COS(RADIANS(ap.Longitude - ap2.Longitude)) + SIN(RADIANS(ap.Latitude)) * SIN(RADIANS(ap2.Latitude))))), 0) AS tripDistance,
+        al.overall_rating AS airlineRating, seat_rating AS seatRating, staff_rating AS staffRating, food_rating AS foodRating,
+        entertain_rating AS entertain_rating, ap.overall_rating AS sourceAirportRating, ap.queue_rating AS sourceQueueRating,
+        ap.clean_rating AS sourceCleanRating, ap2.overall_rating AS destAirportRating, ap2.queue_rating AS destQueueRating,
+        ap2.clean_rating AS destCleanRating, averageDelay, delayRate
+  FROM tmp_route r JOIN tmp_airline al ON r.airlineID = al.id
+  JOIN tmp_airport ap ON r.sourceIata = ap.iata
+  JOIN tmp_airport ap2 ON r.destIata = ap2.iata
+  LEFT JOIN FlightDelay_Route d ON al.iata = d.OpCarrier AND r.sourceIata = origin AND r.destIata = dest
+  ORDER BY tripRating DESC
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+}
+
+// http://localhost:8080/trip_layover?start_city=Atlanta&dest_city=Beijing
+const trip_layover = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 20;
+
+  if (!page) {
+    connection.query(`
+    WITH tmp_route AS
+    (SELECT r1.airlineID AS airlineID,
+    r1.sourceAirport AS sourceIata,
+    r1.destinationAirport as layoverIata,
+    r2.destinationAirport as destIata
+    FROM (SELECT airlineID, sourceAirport, destinationAirport FROM Routes
+    WHERE sourceAirport in (SELECT iata from Airports WHERE city like '${req.query.start_city}%' AND iata IS NOT NULL)
+    AND destinationAirport in (SELECT iata from Airports WHERE city not like '${req.query.dest_city}%'AND iata IS NOT NULL)) r1
+    JOIN
+    (SELECT airlineID, sourceAirport, destinationAirport FROM Routes
+    WHERE sourceAirport in (SELECT iata from Airports WHERE city not like '${req.query.start_city}%' AND iata IS NOT NULL)
+    AND destinationAirport in (SELECT iata from Airports WHERE city like '${req.query.dest_city}%'
+    AND iata IS NOT NULL)) r2
+    ON r1.airlineID = r2.airlineID AND r1.destinationAirport = r2.sourceAirport
+    GROUP BY airlineID, sourceIata, layoverIata, destIata
+    ),
+    tmp_airline AS (SELECT id, Airlines.name AS name, iata, overall_rating, seat_rating, staff_rating, food_rating, entertain_rating
+    FROM Airlines JOIN AirlineMap ON Airlines.id = AirlineMap.openflight_airlineID
+     JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(seat_rating) AS seat_rating, AVG(staff_rating) AS staff_rating,
+            AVG(food_rating) AS food_rating, AVG(entertain_rating) AS entertain_rating
+      FROM Review_Airline
+      GROUP BY name ) r
+     ON AirlineMap.skytrax_airlineName = r.name),
+    tmp_airport AS (SELECT id, Airports.name AS name, city, country, iata, latitude, longitude, overall_rating, queue_rating, clean_rating
+    FROM Airports JOIN AirportMap ON Airports.id = AirportMap.openflight_airportID
+        JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(queue_rating) AS queue_rating, AVG(clean_rating) AS clean_rating
+      FROM Review_Airport
+      GROUP BY name ) r
+     ON AirportMap.skytrax_airportName = r.name)
+SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, al.name AS airlineName, ap.city AS sourceCity, sourceIata,
+       ap2.city as layoverCity, layoverIata, ap3.city AS destCity, destIata,
+       ROUND((al.overall_rating + ap.overall_rating + ap2.overall_rating + ap2.overall_rating)/4, 1) AS tripRating,
+       (111.111 * (1/1.6) * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(ap.Latitude)) * COS(RADIANS(ap2.Latitude))
+        * COS(RADIANS(ap.Longitude - ap2.Longitude)) + SIN(RADIANS(ap.Latitude)) * SIN(RADIANS(ap2.Latitude)))))) +
+       (111.111 * (1/1.6) * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(ap2.Latitude)) * COS(RADIANS(ap3.Latitude))
+        * COS(RADIANS(ap2.Longitude - ap3.Longitude)) + SIN(RADIANS(ap2.Latitude)) * SIN(RADIANS(ap3.Latitude)))))) AS tripDistance,
+       al.overall_rating AS airlineRating, seat_rating AS seatRating, staff_rating AS staffRating, food_rating AS foodRating,
+       entertain_rating AS entertain_rating, ap.overall_rating AS sourceAirportRating, ap.queue_rating AS sourceQueueRating,
+       ap.clean_rating AS sourceCleanRating, ap2.overall_rating AS layoverAirportRating, ap2.queue_rating AS layoverQueueRating,
+       ap2.clean_rating AS layoverCleanRating, ap3.overall_rating AS destAirportRating, ap3.queue_rating AS destQueueRating,
+       ap3.clean_rating AS destCleanRating, d1.averageDelay, d1.delayRate, d2.averageDelay, d2.delayRate
+FROM tmp_route r JOIN tmp_airline al ON r.airlineID = al.id
+JOIN tmp_airport ap ON r.sourceIata = ap.iata
+JOIN tmp_airport ap2 ON r.layoverIata = ap2.iata
+JOIN tmp_airport ap3 ON r.destIata = ap3.iata
+LEFT JOIN FlightDelay_Route d1 ON al.iata = d1.OpCarrier AND r.sourceIata = d1.origin AND r.layoverIata = d1.dest
+LEFT JOIN FlightDelay_Route d2 ON al.iata = d2.OpCarrier AND r.layoverIata = d2.origin AND r.destIata = d2.dest
+ORDER BY tripDistance ASC, tripRating DESC
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });  } 
+
+  else {
+    // Pagination
+    connection.query(`
+    WITH tmp_route AS
+    (SELECT r1.airlineID AS airlineID,
+    r1.sourceAirport AS sourceIata,
+    r1.destinationAirport as layoverIata,
+    r2.destinationAirport as destIata
+    FROM (SELECT airlineID, sourceAirport, destinationAirport FROM Routes
+    WHERE sourceAirport in (SELECT iata from Airports WHERE city like '${req.query.start_city}%' AND iata IS NOT NULL)
+    AND destinationAirport in (SELECT iata from Airports WHERE city not like '${req.query.dest_city}%'AND iata IS NOT NULL)) r1
+    JOIN
+    (SELECT airlineID, sourceAirport, destinationAirport FROM Routes
+    WHERE sourceAirport in (SELECT iata from Airports WHERE city not like '${req.query.start_city}%' AND iata IS NOT NULL)
+    AND destinationAirport in (SELECT iata from Airports WHERE city like '${req.query.dest_city}%'
+    AND iata IS NOT NULL)) r2
+    ON r1.airlineID = r2.airlineID AND r1.destinationAirport = r2.sourceAirport
+    GROUP BY airlineID, sourceIata, layoverIata, destIata
+    ),
+    tmp_airline AS (SELECT id, Airlines.name AS name, iata, overall_rating, seat_rating, staff_rating, food_rating, entertain_rating
+    FROM Airlines JOIN AirlineMap ON Airlines.id = AirlineMap.openflight_airlineID
+     JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(seat_rating) AS seat_rating, AVG(staff_rating) AS staff_rating,
+            AVG(food_rating) AS food_rating, AVG(entertain_rating) AS entertain_rating
+      FROM Review_Airline
+      GROUP BY name ) r
+     ON AirlineMap.skytrax_airlineName = r.name),
+    tmp_airport AS (SELECT id, Airports.name AS name, city, country, iata, latitude, longitude, overall_rating, queue_rating, clean_rating
+    FROM Airports JOIN AirportMap ON Airports.id = AirportMap.openflight_airportID
+        JOIN
+     (SELECT name, AVG(overall_rating) AS overall_rating, AVG(queue_rating) AS queue_rating, AVG(clean_rating) AS clean_rating
+      FROM Review_Airport
+      GROUP BY name ) r
+     ON AirportMap.skytrax_airportName = r.name)
+SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, al.name AS airlineName, ap.city AS sourceCity, sourceIata,
+       ap2.city as layoverCity, layoverIata, ap3.city AS destCity, destIata,
+       ROUND((al.overall_rating + ap.overall_rating + ap2.overall_rating + ap2.overall_rating)/4, 1) AS tripRating,
+       (111.111 * (1/1.6) * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(ap.Latitude)) * COS(RADIANS(ap2.Latitude))
+        * COS(RADIANS(ap.Longitude - ap2.Longitude)) + SIN(RADIANS(ap.Latitude)) * SIN(RADIANS(ap2.Latitude)))))) +
+       (111.111 * (1/1.6) * DEGREES(ACOS(LEAST(1.0, COS(RADIANS(ap2.Latitude)) * COS(RADIANS(ap3.Latitude))
+        * COS(RADIANS(ap2.Longitude - ap3.Longitude)) + SIN(RADIANS(ap2.Latitude)) * SIN(RADIANS(ap3.Latitude)))))) AS tripDistance,
+       al.overall_rating AS airlineRating, seat_rating AS seatRating, staff_rating AS staffRating, food_rating AS foodRating,
+       entertain_rating AS entertain_rating, ap.overall_rating AS sourceAirportRating, ap.queue_rating AS sourceQueueRating,
+       ap.clean_rating AS sourceCleanRating, ap2.overall_rating AS layoverAirportRating, ap2.queue_rating AS layoverQueueRating,
+       ap2.clean_rating AS layoverCleanRating, ap3.overall_rating AS destAirportRating, ap3.queue_rating AS destQueueRating,
+       ap3.clean_rating AS destCleanRating, d1.averageDelay, d1.delayRate, d2.averageDelay, d2.delayRate
+FROM tmp_route r JOIN tmp_airline al ON r.airlineID = al.id
+JOIN tmp_airport ap ON r.sourceIata = ap.iata
+JOIN tmp_airport ap2 ON r.layoverIata = ap2.iata
+JOIN tmp_airport ap3 ON r.destIata = ap3.iata
+LEFT JOIN FlightDelay_Route d1 ON al.iata = d1.OpCarrier AND r.sourceIata = d1.origin AND r.layoverIata = d1.dest
+LEFT JOIN FlightDelay_Route d2 ON al.iata = d2.OpCarrier AND r.layoverIata = d2.origin AND r.destIata = d2.dest
+ORDER BY tripDistance ASC, tripRating DESC
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });      
+  }
+}
+
+
 
 // TODO: Add route variable names below, seperated by commas
 module.exports = {
@@ -749,6 +994,7 @@ module.exports = {
   top_airport,
   top_countries,
   top_airports_by_country,
+
   // BL
   get_city_or_country,
   find_destinations, 
@@ -769,5 +1015,7 @@ module.exports = {
   // MF
   best_route_cities_overall,
   best_route_cities_dining,
-  routes_one_layover
+  routes_one_layover,
+  trip_direct,
+  trip_layover
 }

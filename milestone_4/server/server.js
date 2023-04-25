@@ -44,7 +44,8 @@ app.get('/most_delayed_route/', routes.most_delayed_route);
 app.get('/best_route_cities_overall/', routes.best_route_cities_overall);
 app.get('/best_route_cities_dining/', routes.best_route_cities_dining);
 app.get('/routes_one_layover/', routes.routes_one_layover);
-
+app.get('/trip_direct/', routes.trip_direct);
+app.get('/trip_layover/', routes.trip_layover);
 
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`)
