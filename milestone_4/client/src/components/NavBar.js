@@ -64,12 +64,19 @@ export default function NavBar() {
     { href: '/routes/delay_stats', text: 'Flight Delay Stats' }
   ];
 
+  // Dropdown Items for the Airlines Page in Nav bar
+  const airlinesDropdownItems = [
+    { href: '/airlines/look_up_reviews', text: 'Look Up an Airline' },
+    { href: '/airlines/airline_ranking', text: 'Rank by Ratings' },
+    { href: '/airlines/coverage', text: 'Check Coverages' },
+  ];
+
   return (
     <AppBar position='static'>
       <Container maxWidth='xl'>
         <Toolbar disableGutters>
           <NavText href='/' text='SimpliFly' isMain />
-          <NavText href='/airlines' text='Airlines' />
+          <NavText href='/airlines' text='Airlines' dropdownItems={airlinesDropdownItems}/>
           <NavText href='/airports' text='Airports' />
           {/* <NavText href='/routes' text='Routes' /> */}
           <NavText href="/routes" text="Routes" dropdownItems={routesDropdownItems} />

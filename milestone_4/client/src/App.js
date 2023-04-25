@@ -15,6 +15,12 @@ import DelayStats from "./pages/DelayStats";
 // for Trip Planner
 import TripPlanner from "./pages/TripPlanner";
 
+// for Airlines pages
+import AirlineRanking from "./pages/AirlineRanking";
+import SearchAirline from "./pages/SearchAirline";
+import BroadestCoverage from "./pages/BroadestCoverage";
+
+
 // createTheme enables you to customize the look and feel of your app past the default
 // in this case, we only change the color scheme
 export const theme = createTheme({
@@ -46,6 +52,10 @@ export default function App() {
           <Route path="/routes/delay_stats" element={<DelayStats />} />
           <Route path="/trip" element={<TripPlanner />} />
 
+          <Route path="/airlines/airline_ranking" element={<AirlineRanking />} /> 
+          <Route path="/airlines/look_up_reviews" element={<SearchAirline />} /> 
+          <Route path="/airlines/coverage" element={<BroadestCoverage />} /> 
+          
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

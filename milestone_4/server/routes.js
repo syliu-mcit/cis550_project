@@ -17,19 +17,38 @@ connection.connect((err) => err && console.log(err));
 // ZW:
 // Route 1: GET all the reviews for a particular airline /airline_review/:airline_name
 const airline_reviews = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 50;
   // a route that given an airline_name, returns all records of reviews for the airline
-  connection.query(`
-    SELECT *
-    FROM Review_Airline
-    WHERE name = '${req.params.airline_name}'
-  `, (err, data) => {
-    if (err || data.length === 0) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data);
-    }
-  });
+  if (!page) {
+    connection.query(`
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, cabin_flown, ROUND(overall_rating,3) AS overall_rating, ROUND(seat_rating, 3) AS seat_rating, ROUND(staff_rating,3) AS staff_rating, ROUND(food_rating,3) AS food_rating, ROUND(entertain_rating,3) AS entertain_rating, ROUND(value_rating,3) AS value_rating, recommended
+      FROM Review_Airline
+      WHERE name = '${req.params.airline_name}'
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });
+  } else {
+    connection.query(`
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, cabin_flown, ROUND(overall_rating,3) AS overall_rating, ROUND(seat_rating, 3) AS seat_rating, ROUND(staff_rating,3) AS staff_rating, ROUND(food_rating,3) AS food_rating, ROUND(entertain_rating,3) AS entertain_rating, ROUND(value_rating,3) AS value_rating, recommended
+      FROM Review_Airline
+      WHERE name = '${req.params.airline_name}'
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });
+  }
 }
 
 // Route 2: GET the top airlines for each category (default 20 per page) /top_airline/:category?page=1&page_size=10
@@ -40,8 +59,10 @@ const top_airline = async function(req, res) {
 
   if (!page) {
     connection.query(`
-      SELECT name, AVG(${req.params.category}) FROM Review_Airline
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating 
+      FROM Review_Airline
       GROUP BY name
+      HAVING COUNT(${req.params.category}) > 30
       ORDER BY AVG(${req.params.category}) DESC, name
     `, (err, data) => {
       if (err || data.length === 0) {
@@ -54,8 +75,10 @@ const top_airline = async function(req, res) {
   } else {
     // Pagination
     connection.query(`
-      SELECT name, AVG(${req.params.category}) FROM Review_Airline
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating 
+      FROM Review_Airline
       GROUP BY name
+      HAVING COUNT(${req.params.category}) > 30
       ORDER BY AVG(${req.params.category}) DESC, name
       LIMIT ${pageSize}
       OFFSET ${pageSize*(page-1)};
@@ -89,23 +112,68 @@ const class_ratings = async function(req, res) {
 
 // Route 4: GET the airlines with the broadest coverage (number of distinct routes) along with their overall ratings /broadest_coverage_ratings
 const broadest_coverage_ratings = async function(req, res) {
-  connection.query(`
-    SELECT DISTINCT ra.name, COUNT(r.airlineID) AS number_of_routes, AVG(ra.overall_rating) AS overall_rating
-    FROM Review_Airline ra
-    JOIN AirlineMap m
-    ON ra.name = m.skytrax_airlineName
-    JOIN Routes r
-    ON r.airlineID = m.openflight_airlineID
-    GROUP BY r.airlineID
-    ORDER BY COUNT(r.airlineID) DESC
-  `, (err, data) => {
-    if (err || data.length === 0) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data);
-    }
-  }); 
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 50;
+
+  if (!page) {
+    connection.query(`
+      WITH ra_lite AS (
+          SELECT name, AVG(overall_rating) AS overall_rating
+          From Review_Airline
+          GROUP BY name
+          HAVING COUNT(overall_rating) > 10
+      ), r_lite AS (
+          SELECT airlineID
+          FROM Routes
+      )
+
+      SELECT DISTINCT UPPER(REPLACE(ra_lite.name, "-", " ")) AS name, COUNT(r_lite.airlineID) AS number_of_routes, ROUND(AVG(ra_lite.overall_rating),2) AS overall_rating, TO_BASE64(RANDOM_BYTES(16)) as res_id
+      FROM ra_lite
+      JOIN AirlineMap m
+      ON ra_lite.name = m.skytrax_airlineName
+      JOIN r_lite
+      ON r_lite.airlineID = m.openflight_airlineID
+      GROUP BY r_lite.airlineID
+      ORDER BY COUNT(r_lite.airlineID) DESC;
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    }); 
+  } else {
+    connection.query(`
+      WITH ra_lite AS (
+          SELECT name, AVG(overall_rating) AS overall_rating
+          From Review_Airline
+          GROUP BY name
+          HAVING COUNT(overall_rating) > 10
+      ), r_lite AS (
+          SELECT airlineID
+          FROM Routes
+      )
+
+      SELECT DISTINCT UPPER(REPLACE(ra_lite.name, "-", " ")) AS name, COUNT(r_lite.airlineID) AS number_of_routes, ROUND(AVG(ra_lite.overall_rating),2) AS overall_rating, TO_BASE64(RANDOM_BYTES(16)) as res_id
+      FROM ra_lite
+      JOIN AirlineMap m
+      ON ra_lite.name = m.skytrax_airlineName
+      JOIN r_lite
+      ON r_lite.airlineID = m.openflight_airlineID
+      GROUP BY r_lite.airlineID
+      ORDER BY COUNT(r_lite.airlineID) DESC
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+        if (err || data.length === 0) {
+          console.log(err);
+          res.json({});
+        } else {
+          res.json(data);
+        }
+      }); 
+  }
 }
 
 // Route 5: GET all the reviews for a particular airport /airport_review/:airport_name
