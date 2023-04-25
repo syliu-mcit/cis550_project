@@ -12,6 +12,9 @@ import RouteMap from "./pages/RouteMap";
 import PopularRoute from "./pages/PopularRoute";
 import DelayStats from "./pages/DelayStats";
 
+// for Trip Planner
+import TripPlanner from "./pages/TripPlanner";
+
 // createTheme enables you to customize the look and feel of your app past the default
 // in this case, we only change the color scheme
 export const theme = createTheme({
@@ -41,6 +44,7 @@ export default function App() {
           <Route path="/routes/route_map" element={<RouteMap />} />
           <Route path="/routes/popular_routes" element={<PopularRoute />} />
           <Route path="/routes/delay_stats" element={<DelayStats />} />
+          <Route path="/trip" element={<TripPlanner />} />
 
         </Routes>
       </BrowserRouter>
