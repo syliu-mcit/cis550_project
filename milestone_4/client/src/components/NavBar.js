@@ -71,13 +71,18 @@ export default function NavBar() {
     { href: '/airlines/coverage', text: 'Check Coverages' },
   ];
 
+  // Dropdown Items for the Airports Page in Nav bar
+  const airportsDropdownItems = [
+    { href: '/airports/look_up_reviews', text: 'Look Up an Airport' },
+    { href: '/airports/airport_ranking', text: 'Rank by Ratings' },
+  ];
   return (
     <AppBar position='static'>
       <Container maxWidth='xl'>
         <Toolbar disableGutters>
           <NavText href='/' text='SimpliFly' isMain />
           <NavText href='/airlines' text='Airlines' dropdownItems={airlinesDropdownItems}/>
-          <NavText href='/airports' text='Airports' />
+          <NavText href='/airports' text='Airports' dropdownItems={airportsDropdownItems}/>
           {/* <NavText href='/routes' text='Routes' /> */}
           <NavText href="/routes" text="Routes" dropdownItems={routesDropdownItems} />
           <NavText href='/trip' text='Trip Planner' />

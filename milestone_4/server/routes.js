@@ -178,19 +178,38 @@ const broadest_coverage_ratings = async function(req, res) {
 
 // Route 5: GET all the reviews for a particular airport /airport_review/:airport_name
 const airport_reviews = async function(req, res) {
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 50;
   // a route that given an airport_name, returns all records of reviews for the airport
-  connection.query(`
-    SELECT *
-    FROM Review_Airport
-    WHERE name = '${req.params.airport_name}'
-  `, (err, data) => {
-    if (err || data.length === 0) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data);
-    }
-  });
+  if (!page) {
+    connection.query(`
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, ROUND(overall_rating,3) AS overall_rating, ROUND(queue_rating, 3) AS queue_rating, ROUND(clean_rating,3) AS clean_rating, ROUND(shop_rating,3) AS shop_rating, recommended
+      FROM Review_Airport
+      WHERE name = '${req.params.airport_name}'
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });
+  } else {
+    connection.query(`
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, ROUND(overall_rating,3) AS overall_rating, ROUND(queue_rating, 3) AS queue_rating, ROUND(clean_rating,3) AS clean_rating, ROUND(shop_rating,3) AS shop_rating, recommended
+      FROM Review_Airport
+      WHERE name = '${req.params.airport_name}'
+      LIMIT ${pageSize}
+      OFFSET ${pageSize*(page-1)};
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });
+  }
 }
 
 // Route 6: GET the top airports for each category (default 20 per page) /top_airport/:category?page=1&page_size=10
@@ -201,8 +220,10 @@ const top_airport = async function(req, res) {
 
   if (!page) {
     connection.query(`
-      SELECT name, AVG(${req.params.category}) FROM Review_Airport
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating 
+      FROM Review_Airport
       GROUP BY name
+      HAVING COUNT(${req.params.category}) > 30
       ORDER BY AVG(${req.params.category}) DESC, name
     `, (err, data) => {
       if (err || data.length === 0) {
@@ -215,8 +236,10 @@ const top_airport = async function(req, res) {
   } else {
     // Pagination
     connection.query(`
-      SELECT name, AVG(${req.params.category}) FROM Review_Airport
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating
+      FROM Review_Airport
       GROUP BY name
+      HAVING COUNT(${req.params.category}) > 30
       ORDER BY AVG(${req.params.category}) DESC, name
       LIMIT ${pageSize}
       OFFSET ${pageSize*(page-1)};
