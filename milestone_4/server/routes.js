@@ -257,13 +257,17 @@ const top_airport = async function(req, res) {
 
 // Route 7: GET the countries ranked by the average ratings of all airports in each country /top_countries
 const top_countries = async function(req, res) {
-  connection.query(`
+  const page = req.query.page;
+  const pageSize = req.query.page_size ?? 50;
+  // a route that given an airport_name, returns all records of reviews for the airport
+  if (!page) {
+    connection.query(`
     WITH avg_rating AS (
       SELECT name, AVG(overall_rating) as rating FROM Review_Airport
       GROUP BY name
     )
     
-    SELECT a.country, AVG(r.rating) as Avg_rating
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, a.country AS name, ROUND(AVG(r.rating),2) as rating
     FROM avg_rating r
     JOIN AirportMap m
     ON r.name = m.skytrax_airportName
@@ -271,14 +275,38 @@ const top_countries = async function(req, res) {
     ON a.id = m.openflight_airportID
     GROUP BY a.country
     ORDER BY AVG(r.rating) DESC;
-  `, (err, data) => {
-    if (err || data.length === 0) {
-      console.log(err);
-      res.json({});
-    } else {
-      res.json(data);
-    }
-  }); 
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });
+  } else {
+    connection.query(`
+    WITH avg_rating AS (
+      SELECT name, AVG(overall_rating) as rating FROM Review_Airport
+      GROUP BY name
+    )
+    
+    SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, a.country AS name, ROUND(AVG(r.rating),2) as rating
+    FROM avg_rating r
+    JOIN AirportMap m
+    ON r.name = m.skytrax_airportName
+    JOIN Airports a
+    ON a.id = m.openflight_airportID
+    GROUP BY a.country
+    ORDER BY AVG(r.rating) DESC;
+    `, (err, data) => {
+      if (err || data.length === 0) {
+        console.log(err);
+        res.json({});
+      } else {
+        res.json(data);
+      }
+    });
+  }
 }
 
 // Route 8: GET the top airports (default 20 per page) in a specific country along with their city and rating /top_airports_by_country/:country_name?page=1&page_size=10
@@ -294,7 +322,7 @@ const top_airports_by_country = async function(req, res) {
         GROUP BY name
       )
       
-      SELECT r.name, a.city, r.rating
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(r.name, "-", " ")) AS name, a.city AS city, ROUND(r.rating,2) as rating
       FROM avg_rating r
       JOIN AirportMap m
       ON r.name = m.skytrax_airportName
@@ -318,7 +346,7 @@ const top_airports_by_country = async function(req, res) {
         GROUP BY name
       )
       
-      SELECT r.name, a.city, r.rating
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(r.name, "-", " ")) AS name, a.city AS city, ROUND(r.rating,2) as rating
       FROM avg_rating r
       JOIN AirportMap m
       ON r.name = m.skytrax_airportName

@@ -75,6 +75,8 @@ export default function NavBar() {
   const airportsDropdownItems = [
     { href: '/airports/look_up_reviews', text: 'Look Up an Airport' },
     { href: '/airports/airport_ranking', text: 'Rank by Ratings' },
+    { href: '/airports/search_country', text: 'Look Up a Country' },
+    { href: '/airports/by_country', text: 'Country Rank' },
   ];
   return (
     <AppBar position='static'>

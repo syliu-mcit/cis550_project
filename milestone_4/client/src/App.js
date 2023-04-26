@@ -23,6 +23,8 @@ import BroadestCoverage from "./pages/BroadestCoverage";
 // for Airports pages
 import AirportRanking from "./pages/AirportRanking";
 import SearchAirport from "./pages/SearchAirport";
+import SearchAirportCountry from "./pages/SearchAirportCountry";
+import AirportRankingCountries from "./pages/AirportRankingCountries";
 
 // createTheme enables you to customize the look and feel of your app past the default
 // in this case, we only change the color scheme
@@ -61,6 +63,8 @@ export default function App() {
           
           <Route path="/airports/airport_ranking" element={<AirportRanking />} /> 
           <Route path="/airports/look_up_reviews" element={<SearchAirport />} /> 
+          <Route path="/airports/search_country" element={<SearchAirportCountry />} /> 
+          <Route path="/airports/by_country" element={<AirportRankingCountries />} /> 
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
