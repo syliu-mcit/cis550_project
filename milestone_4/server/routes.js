@@ -24,7 +24,7 @@ const airline_reviews = async function(req, res) {
     connection.query(`
       SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, cabin_flown, ROUND(overall_rating,3) AS overall_rating, ROUND(seat_rating, 3) AS seat_rating, ROUND(staff_rating,3) AS staff_rating, ROUND(food_rating,3) AS food_rating, ROUND(entertain_rating,3) AS entertain_rating, ROUND(value_rating,3) AS value_rating, recommended
       FROM Review_Airline
-      WHERE name = '${req.params.airline_name}'
+      WHERE name like '${req.params.airline_name}%'
     `, (err, data) => {
       if (err || data.length === 0) {
         console.log(err);
@@ -37,7 +37,7 @@ const airline_reviews = async function(req, res) {
     connection.query(`
       SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, cabin_flown, ROUND(overall_rating,3) AS overall_rating, ROUND(seat_rating, 3) AS seat_rating, ROUND(staff_rating,3) AS staff_rating, ROUND(food_rating,3) AS food_rating, ROUND(entertain_rating,3) AS entertain_rating, ROUND(value_rating,3) AS value_rating, recommended
       FROM Review_Airline
-      WHERE name = '${req.params.airline_name}'
+      WHERE name like '${req.params.airline_name}%'
       LIMIT ${pageSize}
       OFFSET ${pageSize*(page-1)};
     `, (err, data) => {
@@ -59,10 +59,10 @@ const top_airline = async function(req, res) {
 
   if (!page) {
     connection.query(`
-      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating 
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating
       FROM Review_Airline
       GROUP BY name
-      HAVING COUNT(${req.params.category}) > 30
+      HAVING COUNT(${req.params.category}) > 100
       ORDER BY AVG(${req.params.category}) DESC, name
     `, (err, data) => {
       if (err || data.length === 0) {
@@ -75,10 +75,10 @@ const top_airline = async function(req, res) {
   } else {
     // Pagination
     connection.query(`
-      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating 
+      SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, UPPER(REPLACE(name, "-", " ")) AS name, ROUND(AVG(${req.params.category}),2) as rating
       FROM Review_Airline
       GROUP BY name
-      HAVING COUNT(${req.params.category}) > 30
+      HAVING COUNT(${req.params.category}) > 100
       ORDER BY AVG(${req.params.category}) DESC, name
       LIMIT ${pageSize}
       OFFSET ${pageSize*(page-1)};
@@ -94,6 +94,7 @@ const top_airline = async function(req, res) {
 
 }
 
+// DEPRECATED
 // Route 3: GET the ratings for economy class vs. business class for all airlines /class_ratings
 const class_ratings = async function(req, res) {
   connection.query(`
@@ -185,7 +186,7 @@ const airport_reviews = async function(req, res) {
     connection.query(`
       SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, ROUND(overall_rating,3) AS overall_rating, ROUND(queue_rating, 3) AS queue_rating, ROUND(clean_rating,3) AS clean_rating, ROUND(shop_rating,3) AS shop_rating, recommended
       FROM Review_Airport
-      WHERE name = '${req.params.airport_name}'
+      WHERE name like '%${req.params.airport_name}%'
     `, (err, data) => {
       if (err || data.length === 0) {
         console.log(err);
@@ -198,7 +199,7 @@ const airport_reviews = async function(req, res) {
     connection.query(`
       SELECT TO_BASE64(RANDOM_BYTES(16)) as res_id, name, LEFT(date, 10) as date, ROUND(overall_rating,3) AS overall_rating, ROUND(queue_rating, 3) AS queue_rating, ROUND(clean_rating,3) AS clean_rating, ROUND(shop_rating,3) AS shop_rating, recommended
       FROM Review_Airport
-      WHERE name = '${req.params.airport_name}'
+      WHERE name like '%${req.params.airport_name}%'
       LIMIT ${pageSize}
       OFFSET ${pageSize*(page-1)};
     `, (err, data) => {
@@ -328,7 +329,7 @@ const top_airports_by_country = async function(req, res) {
       ON r.name = m.skytrax_airportName
       JOIN Airports a
       ON a.id = m.openflight_airportID
-      WHERE country = '${req.params.country_name}'
+      WHERE country LIKE '%${req.params.country_name}%'
       ORDER BY rating DESC, r.name
     `, (err, data) => {
       if (err || data.length === 0) {
@@ -352,7 +353,7 @@ const top_airports_by_country = async function(req, res) {
       ON r.name = m.skytrax_airportName
       JOIN Airports a
       ON a.id = m.openflight_airportID
-      WHERE country = '${req.params.country_name}'
+      WHERE country LIKE '%${req.params.country_name}%'
       ORDER BY rating DESC, r.name
       LIMIT ${pageSize}
       OFFSET ${pageSize*(page-1)};
@@ -372,6 +373,8 @@ const top_airports_by_country = async function(req, res) {
 
 
 // BL: 
+
+//
 const get_city_or_country = async function(req, res) {
   // 
   connection.query(`
